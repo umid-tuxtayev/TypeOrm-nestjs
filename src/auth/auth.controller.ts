@@ -19,8 +19,9 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: false,        // localhost
+      secure: false,
       sameSite: 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -50,11 +51,24 @@ export class AuthController {
 
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return { accessToken: tokens.accessToken };
+  }
+
+  @HttpCode(200)
+  @Post('forget-password')
+  async resendPassword(@Body() ResendOtpAuthDto: ResendOtpAuthDto) {
+    return this.authService.forgetPassword(ResendOtpAuthDto.email)
+  }
+
+  @HttpCode(200)
+  @Post('change-password')
+  async changePassword(@Body() { email, otp, password }) {
+    return this.authService.changePassword(email, otp, password)
   }
 }

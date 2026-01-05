@@ -104,4 +104,34 @@ export class AuthService {
       throw new Error('Invalid or expired refresh token');
     }
   }
+
+  async forgetPassword(email) {
+    let user = await this.authModel.findOne({ where: { email } });
+    if (!user) throw new NotFoundException('User not found !');
+    let otp = String(Math.floor(100000 + Math.random() * 900000));
+    let otpTime = Date.now() + 1000 * 60 * 2;
+    user.otp = otp;
+    user.isVerified = false;
+    user.otpTime = otpTime;
+    await this.authModel.save(user);
+    await this.mailService.sendOtp(email, otp);
+    return { message: 'forget password successfully', status: 200 };
+  }
+
+  async changePassword(email, otp, newPassword) {
+    let user = await this.authModel.findOne({ where: { email } });
+    let currentTime = Date.now();
+    if (!user) throw new NotFoundException('User not found !');
+    if (Number(user.otpTime) < currentTime) {
+      await this.authModel.update({ email }, { otp: null, otpTime: null })
+      throw new BadRequestException('OTP expired')
+    }
+    let hashPassword = await bcrypt.hash(newPassword, 10)
+    if (otp != user.otp) throw new BadRequestException('Invalid otp !')
+    user.otp = null;
+    user.isVerified = true;
+    user.password = hashPassword
+    await this.authModel.save(user);
+    return { message: 'Change password succcessfully', status: 200 }
+  }
 }
